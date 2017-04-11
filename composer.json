@@ -1,0 +1,24 @@
+{
+  "name": "x2ts/x2ts-curl",
+  "description": "The cURL wrapper for x2ts",
+  "type": "library",
+  "require": {
+    "x2ts/x2ts": "^2.0.0",
+    "ext-curl": ">=7.0.0",
+    "lib-curl": ">=7.16.2"
+  },
+  "autoload": {
+    "psr-4": {
+      "x2ts\\curl\\": [
+        "src"
+      ]
+    }
+  },
+  "license": "BSD",
+  "authors": [
+    {
+      "name": "TingSong-Syu",
+      "email": "rek@rek.me"
+    }
+  ]
+}
