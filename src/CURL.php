@@ -62,6 +62,63 @@ class CURL extends Component {
         return $this->parseHttpResponse($r);
     }
 
+    public function downloadOverwrite(string $filePath, string $url, array $headers = []) {
+        $fp = fopen($filePath, 'wb');
+        $c = curl_init($url);
+        curl_setopt_array($c, [
+            CURLOPT_FILE           => $fp,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS      => 100,
+        ]);
+        if (count($headers) > 0) {
+            $headerList = [];
+            foreach ($headers as $name => $value) {
+                $headerList[] = "$name: $value";
+            }
+            curl_setopt($c, CURLOPT_HTTPHEADER, $headerList);
+            return $c;
+        }
+        $r = curl_exec($c);
+        if (!$r) {
+            X::logger()->warn(
+                sprintf('cURL error(%d): %s', curl_errno($c), curl_error($c))
+            );
+        }
+        curl_close($c);
+        return $r;
+    }
+
+    public function downloadResume(string $filePath, string $url, array $headers = []) {
+        $pos = 0;
+        if (is_file($filePath)) {
+            $pos = filesize($filePath);
+        }
+        $fp = fopen($filePath, 'ab');
+        $c = curl_init($url);
+        curl_setopt_array($c, [
+            CURLOPT_FILE           => $fp,
+            CURLOPT_RESUME_FROM    => $pos,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS      => 100,
+        ]);
+        if (count($headers) > 0) {
+            $headerList = [];
+            foreach ($headers as $name => $value) {
+                $headerList[] = "$name: $value";
+            }
+            curl_setopt($c, CURLOPT_HTTPHEADER, $headerList);
+            return $c;
+        }
+        $r = curl_exec($c);
+        if (!$r) {
+            X::logger()->warn(
+                sprintf('cURL error(%d): %s', curl_errno($c), curl_error($c))
+            );
+        }
+        curl_close($c);
+        return $r;
+    }
+
     /**
      * @param  string $r
      *
