@@ -83,8 +83,8 @@ class CURL extends Component {
                 throw new CURLException(curl_error($c), curl_errno($c));
             }
         } finally {
-            is_resource($c) && curl_close($c);
-            is_resource($fp) && fclose($fp);
+            is_resource($c ?? null) && curl_close($c);
+            is_resource($fp ?? null) && fclose($fp);
         }
     }
 
@@ -113,8 +113,8 @@ class CURL extends Component {
                 throw new CURLException(curl_error($c), curl_errno($c));
             }
         } finally {
-            is_resource($c) && curl_close($c);
-            is_resource($fp) && fclose($fp);
+            is_resource($c ?? null) && curl_close($c);
+            is_resource($fp ?? null) && fclose($fp);
         }
     }
 
@@ -171,7 +171,7 @@ class CURL extends Component {
      *
      * @return resource
      */
-    private function curlDownloadInit(string $url, array $headers, $fp): resource {
+    private function curlDownloadInit(string $url, array $headers, $fp) {
         $c = curl_init($url);
         curl_setopt_array($c, [
             CURLOPT_FILE           => $fp,
