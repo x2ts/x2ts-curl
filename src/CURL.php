@@ -11,6 +11,7 @@ namespace x2ts\curl;
 
 use x2ts\Component;
 use x2ts\ComponentFactory as X;
+use x2ts\IOException;
 
 class CURL extends Component {
     /**
@@ -62,61 +63,59 @@ class CURL extends Component {
         return $this->parseHttpResponse($r);
     }
 
+    /**
+     * @param string $filePath
+     * @param string $url
+     * @param array  $headers
+     *
+     * @throws CURLException
+     * @throws IOException
+     */
     public function downloadOverwrite(string $filePath, string $url, array $headers = []) {
-        $fp = fopen($filePath, 'wb');
-        $c = curl_init($url);
-        curl_setopt_array($c, [
-            CURLOPT_FILE           => $fp,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_MAXREDIRS      => 100,
-        ]);
-        if (count($headers) > 0) {
-            $headerList = [];
-            foreach ($headers as $name => $value) {
-                $headerList[] = "$name: $value";
+        try {
+            error_clear_last();
+            $fp = fopen($filePath, 'wb');
+            if ($fp === false && ($error = error_get_last())) {
+                throw new IOException($error['message'], $error['type']);
             }
-            curl_setopt($c, CURLOPT_HTTPHEADER, $headerList);
-            return $c;
+            $c = $this->curlDownloadInit($url, $headers, $fp);
+            if (!curl_exec($c)) {
+                throw new CURLException(curl_error($c), curl_errno($c));
+            }
+        } finally {
+            is_resource($c) && curl_close($c);
+            is_resource($fp) && fclose($fp);
         }
-        $r = curl_exec($c);
-        if (!$r) {
-            X::logger()->warn(
-                sprintf('cURL error(%d): %s', curl_errno($c), curl_error($c))
-            );
-        }
-        curl_close($c);
-        return $r;
     }
 
+    /**
+     * @param string $filePath
+     * @param string $url
+     * @param array  $headers
+     *
+     * @throws CURLException
+     * @throws IOException
+     */
     public function downloadResume(string $filePath, string $url, array $headers = []) {
-        $pos = 0;
-        if (is_file($filePath)) {
-            $pos = filesize($filePath);
-        }
-        $fp = fopen($filePath, 'ab');
-        $c = curl_init($url);
-        curl_setopt_array($c, [
-            CURLOPT_FILE           => $fp,
-            CURLOPT_RESUME_FROM    => $pos,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_MAXREDIRS      => 100,
-        ]);
-        if (count($headers) > 0) {
-            $headerList = [];
-            foreach ($headers as $name => $value) {
-                $headerList[] = "$name: $value";
+        try {
+            $pos = 0;
+            if (is_file($filePath)) {
+                $pos = filesize($filePath);
             }
-            curl_setopt($c, CURLOPT_HTTPHEADER, $headerList);
-            return $c;
+            error_clear_last();
+            $fp = fopen($filePath, 'ab');
+            if ($fp === false && ($error = error_get_last())) {
+                throw new IOException($error['message'], $error['type']);
+            }
+            $c = $this->curlDownloadInit($url, $headers, $fp);
+            curl_setopt($c, CURLOPT_RESUME_FROM, $pos);
+            if (!curl_exec($c)) {
+                throw new CURLException(curl_error($c), curl_errno($c));
+            }
+        } finally {
+            is_resource($c) && curl_close($c);
+            is_resource($fp) && fclose($fp);
         }
-        $r = curl_exec($c);
-        if (!$r) {
-            X::logger()->warn(
-                sprintf('cURL error(%d): %s', curl_errno($c), curl_error($c))
-            );
-        }
-        curl_close($c);
-        return $r;
     }
 
     /**
@@ -161,6 +160,30 @@ class CURL extends Component {
             }
             curl_setopt($c, CURLOPT_HTTPHEADER, $headerList);
             return $c;
+        }
+        return $c;
+    }
+
+    /**
+     * @param string $url
+     * @param array  $headers
+     * @param        $fp
+     *
+     * @return resource
+     */
+    private function curlDownloadInit(string $url, array $headers, $fp): resource {
+        $c = curl_init($url);
+        curl_setopt_array($c, [
+            CURLOPT_FILE           => $fp,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS      => 100,
+        ]);
+        if (count($headers) > 0) {
+            $headerList = [];
+            foreach ($headers as $name => $value) {
+                $headerList[] = "$name: $value";
+            }
+            curl_setopt($c, CURLOPT_HTTPHEADER, $headerList);
         }
         return $c;
     }
